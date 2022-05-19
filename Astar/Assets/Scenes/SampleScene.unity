@@ -155,6 +155,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveButton: 0
   moveSpeed: 1
+  maze: {fileID: 1444179293}
 --- !u!4 &451908293
 Transform:
   m_ObjectHideFlags: 0
@@ -301,6 +302,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveButton: 1
   moveSpeed: 1
+  maze: {fileID: 1444179293}
 --- !u!4 &519720385
 Transform:
   m_ObjectHideFlags: 0

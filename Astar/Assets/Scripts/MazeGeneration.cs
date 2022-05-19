@@ -24,8 +24,8 @@ public class MazeGeneration : MonoBehaviour
         {
             seed = Random.Range(0, int.MaxValue);
             Random.InitState(seed);
-            width = Random.Range(10, 100);
-            height = Random.Range(10, 100);
+            //width = Random.Range(10, 100);
+            //height = Random.Range(10, 100);
             desiredWallpercentage = Random.Range(0.2f, 1.0f);
             DestroyMazeObjects();
             GenerateMaze();

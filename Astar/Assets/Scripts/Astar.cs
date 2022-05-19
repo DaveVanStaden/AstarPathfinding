@@ -12,68 +12,184 @@ public class Astar
     /// </summary>
     ///private Vector2Int startPos = new Vector2Int(0, 0);
     ///private Vector2Int endPos = new Vector2Int(8, 8);
-    private MazeGeneration grid;
+    private MazeGeneration m_Maze;
+    private int gridSizeX, gridSizeY;
+    private Vector2 gridWorldSize;
+    private float nodeRadius = 0.5f;
+    private float nodeDiameter;
+    private Node[,] nodeGrid;
+    public List<Vector2Int> path;
     /// <param name="endPos"></param>
     ///public List<Vector2Int> grid = new List<Vector2Int>();
     /// <param name="grid"></param>
     /// <returns></returns>
+
     public List<Vector2Int> FindPathToTarget(Vector2Int startPos, Vector2Int endPos, Cell[,] grid)
     {
-        Cell startCell = grid[startPos.x,startPos.y];
         Node startNode = new Node();
-        startNode.position = startCell.gridPosition;
-        Cell endCell = grid[endPos.x,endPos.y];
-        Node endNode = new Node();
-        endNode.position = endCell.gridPosition;
-        List<Vector2Int> finalPathInt = new List<Vector2Int>();
-        List<Node> finalPathNode = new List<Node>();
+        startNode.position = startPos;
+        startNode.HScore = GetDistance(startPos, endPos, grid);
+        startNode.GScore = 0;
 
-        List<Node> OpenList = new List<Node>();
-        HashSet<Node> ClosedList = new HashSet<Node>();
+        List<Node> openSetNodes = new List<Node>();
+        HashSet<Node> closedSetNodes = new HashSet<Node>();
+        openSetNodes.Add(startNode);
 
-        OpenList.Add(startNode);
-        while (OpenList.Count > 0)
+        nodeGrid = new Node[grid.GetLength(0), grid.GetLength(1)];
+
+        for (int x = 0; x < grid.GetLength(0); x++)
         {
-    
-            Node CurrentNode = OpenList[0];
-            for (int i = 0; i < OpenList.Count; i++)
+            for (int y = 0; y < grid.GetLength(1); y++)
             {
-                //if (OpenList[i].FScore <= CurrentNode.FScore && OpenList[i].HScore <= CurrentNode.HScore)
-                if (OpenList[i].FScore <= CurrentNode.FScore && OpenList[i].HScore <= CurrentNode.HScore)
-                {
-                    CurrentNode = OpenList[i];
-                }
-            }
-
-            OpenList.Remove(CurrentNode);
-            ClosedList.Add(CurrentNode);
-
-            if (CurrentNode == endNode)
-            {
-                finalPathNode = GetFinalPath(startNode, endNode);
-                for (int i = 0; i < finalPathNode.Count; i++)
-                {
-                    finalPathInt.Add(finalPathNode[i].position);
-                }
-        
+                Node node = new Node();
+                nodeGrid[x, y] = node;
+                nodeGrid[x, y].position = grid[x, y].gridPosition;
+                nodeGrid[x, y].walls = grid[x, y].walls;
+                nodeGrid[x, y].HScore = GetDistance(nodeGrid[x,y].position, endPos, grid);
+                nodeGrid[x, y].GScore = int.MaxValue;
             }
         }
-        return finalPathInt;
+        while (openSetNodes.Count > 0)
+        {
+            Node currentNode = openSetNodes[0];
+            for (int i = 1; i < openSetNodes.Count; i++)
+            {
+                if (openSetNodes[i].FScore < currentNode.FScore || openSetNodes[i].FScore == currentNode.FScore)
+                {
+                    if (openSetNodes[i].HScore < currentNode.HScore)
+                        currentNode = openSetNodes[i];
+                }
+            }
+
+            openSetNodes.Remove(currentNode);
+            closedSetNodes.Add(currentNode);
+
+            if (currentNode.position == endPos)
+            {
+                RetracePath(startNode, currentNode);
+                return path;
+            }
+            foreach (Node neighbour in GetNeighbours(currentNode, nodeGrid))
+            {
+                int dstX = Mathf.Abs(currentNode.position.x - neighbour.position.x);
+                int dstY = Mathf.Abs(currentNode.position.y - neighbour.position.y);
+
+                if (closedSetNodes.Contains(neighbour))
+                    continue;
+                int newMovementCostToNeighbour = currentNode.GScore + GetDistance(currentNode.position, neighbour.position, grid);
+                if (newMovementCostToNeighbour < neighbour.GScore || !openSetNodes.Contains(neighbour))
+                {
+                    //grid[neighbour.position.x, neighbour.position.y]
+                    neighbour.GScore = newMovementCostToNeighbour;
+                    for (int x = -1; x < 1; x++)
+                    {
+                        for (int y = -1; y < 1; y++)
+                        {
+                            int checkX = neighbour.position.x + x;
+                            int checkY = neighbour.position.y + y;
+                            if ((neighbour.walls & Wall.LEFT) != 0 && checkX < 0)
+                            {
+                                continue;
+                            }            
+                            if ((neighbour.walls & Wall.RIGHT) != 0 && checkX > 0)
+                            {
+                                continue;
+                            }            
+                            if ((neighbour.walls & Wall.UP) != 0 &&checkY > 0)
+                            {
+                                continue;
+                            }            
+                            if ((neighbour.walls & Wall.DOWN) != 0 &&checkY < 0)
+                            {
+                                continue;
+                            }
+                        }
+                    }
+
+                    neighbour.parent = currentNode;
+                    if (!openSetNodes.Contains(neighbour))
+                        openSetNodes.Add((neighbour));
+                }
+            }
+        }
+
+        return null;
     }
 
-    public List<Node> GetFinalPath(Node startNode, Node endNode)
+    public void RetracePath(Node startNode, Node endNode)
     {
-        List<Node> FinalPath = new List<Node>();
-        Node CurrentNode = endNode;
-        while (CurrentNode != startNode)
+        List<Vector2Int> path = new List<Vector2Int>();
+        Node currentNode = endNode;
+
+        while (currentNode.position != startNode.position)
         {
-            FinalPath.Add(CurrentNode);
-            CurrentNode = CurrentNode.parent;
+            path.Add(currentNode.position);
+            currentNode = currentNode.parent;
+        }
+        path.Add(startNode.position);
+        path.Reverse();
+
+        this.path = path;
+    }
+    public List<Node> GetNeighbours(Node node, Node[,] grid)
+    {
+        List<Node> neighbours = new List<Node>();
+
+        for (int x = -1; x <= 1; x++)
+        {
+            for (int y = -1; y <= 1; y++)
+            {
+                if (x == 0 && y == 0 || Mathf.Abs(x) == Mathf.Abs(y))
+                    continue;
+                int checkX = node.position.x + x;
+                int checkY = node.position.y + y;
+
+                if (checkX >= 0 && checkX < nodeGrid.GetLength(0) && checkY >= 0 && checkY < nodeGrid.GetLength(1))
+                {
+                    Node tempNode = nodeGrid[checkX, checkY];
+                    neighbours.Add(tempNode);
+                }
+            }
         }
 
-        FinalPath.Reverse();
-        return FinalPath;
+        return neighbours;
     }
+
+    /*int GetDistance(Vector2Int posOne, Vector2Int posTwo)
+    {
+        return Mathf.RoundToInt(Vector2Int.Distance(posOne, posTwo));
+    }*/
+
+    int GetDistance(Vector2Int cellA, Vector2Int cellB, Cell[,] grid)
+    {
+        int dstX = Mathf.Abs(cellA.x - cellB.x);
+        int dstY = Mathf.Abs(cellA.y - cellB.y);
+        int walls = grid[cellA.x, cellA.y].GetNumWalls();
+        /*if ((grid[cellA.x, cellA.y].walls & Wall.LEFT) != 0 && dstX == -1 && dstY == 0)
+        {
+            return 900;
+        }
+        else if ((grid[cellA.x, cellA.y].walls & Wall.RIGHT) != 0 && dstX == 1 && dstY == 0)
+        {
+            return 900;
+        }
+        else if ((grid[cellA.x, cellA.y].walls & Wall.UP) != 0 && dstX == 0 && dstY == 1)
+        {
+            return 900;
+        }
+        else if ((grid[cellA.x, cellA.y].walls & Wall.DOWN) != 0 && dstX == 0 && dstY == -1)
+        {
+            return 900;
+        }
+        else
+        {*/
+            if (dstX > dstY)
+                return 14 * dstY + 10 * (dstX - dstY);
+            return 14 * dstX + 10 * (dstY - dstX);
+        }
+    }
+
+
 
     /// <summary>
     /// This is the Node class you can use this class to store calculated FScores for the cells of the grid, you can leave this as it is
@@ -82,20 +198,22 @@ public class Astar
     {
         public Vector2Int position; //Position on the grid
         public Node parent; //Parent Node of this node
-
-        public float FScore { //GScore + HScore
+        public int gridX, gridY;
+        public Wall walls;
+        public int FScore { //GScore + HScore
             get { return GScore + HScore; }
         }
-        public float GScore; //Current Travelled Distance
-        public float HScore; //Distance estimated based on Heuristic
+        public int GScore; //Current Travelled Distance
+        public int HScore; //Distance estimated based on Heuristic
 
         public Node() { }
-        public Node(Vector2Int position, Node parent, int GScore, int HScore)
+        public Node(Vector2Int position, Node parent, int GScore, int HScore, int _gridX, int _gridY)
         {
             this.position = position;
             this.parent = parent;
             this.GScore = GScore;
             this.HScore = HScore;
+            gridX = _gridX;
+            gridY = _gridY;
         }
     }
-}

@@ -9,7 +9,7 @@ public class Agent : MonoBehaviour
     private Plane ground = new Plane(Vector3.up, 0f);
     private MeshRenderer renderer;
     private GameObject targetVisual;
-    private MazeGeneration maze;
+    [SerializeField]private MazeGeneration maze;
     private LineRenderer line;
     private void Awake()
     {
