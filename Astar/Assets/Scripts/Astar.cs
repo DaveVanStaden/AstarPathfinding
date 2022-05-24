@@ -81,31 +81,6 @@ public class Astar
                 {
                     //grid[neighbour.position.x, neighbour.position.y]
                     neighbour.GScore = newMovementCostToNeighbour;
-                    for (int x = -1; x < 1; x++)
-                    {
-                        for (int y = -1; y < 1; y++)
-                        {
-                            int checkX = neighbour.position.x + x;
-                            int checkY = neighbour.position.y + y;
-                            if ((neighbour.walls & Wall.LEFT) != 0 && checkX < 0)
-                            {
-                                continue;
-                            }            
-                            if ((neighbour.walls & Wall.RIGHT) != 0 && checkX > 0)
-                            {
-                                continue;
-                            }            
-                            if ((neighbour.walls & Wall.UP) != 0 &&checkY > 0)
-                            {
-                                continue;
-                            }            
-                            if ((neighbour.walls & Wall.DOWN) != 0 &&checkY < 0)
-                            {
-                                continue;
-                            }
-                        }
-                    }
-
                     neighbour.parent = currentNode;
                     if (!openSetNodes.Contains(neighbour))
                         openSetNodes.Add((neighbour));
@@ -139,14 +114,32 @@ public class Astar
         {
             for (int y = -1; y <= 1; y++)
             {
+
                 if (x == 0 && y == 0 || Mathf.Abs(x) == Mathf.Abs(y))
                     continue;
                 int checkX = node.position.x + x;
                 int checkY = node.position.y + y;
+                //|| (nodeGrid[node.position.x, node.position.y-y].walls & Wall.DOWN) != 0 && y == -1
 
                 if (checkX >= 0 && checkX < nodeGrid.GetLength(0) && checkY >= 0 && checkY < nodeGrid.GetLength(1))
                 {
                     Node tempNode = nodeGrid[checkX, checkY];
+                    if ((node.walls & Wall.LEFT) != 0 && x == -1 || (tempNode.walls & Wall.RIGHT) != 0 && x == -1)
+                    {
+                        continue;
+                    }            
+                    if ((node.walls & Wall.RIGHT) != 0 && x == 1 || (tempNode.walls & Wall.LEFT) != 0 && x == 1)
+                    {
+                        continue;
+                    }            
+                    if ((node.walls & Wall.UP) != 0 && y == 1 || (tempNode.walls & Wall.DOWN) != 0 && y == 1)
+                    {
+                        continue;
+                    }            
+                    if ((node.walls & Wall.DOWN) != 0 && y == -1 || (tempNode.walls & Wall.UP) != 0 && y == -1)
+                    {
+                        continue;
+                    }
                     neighbours.Add(tempNode);
                 }
             }
@@ -165,25 +158,7 @@ public class Astar
         int dstX = Mathf.Abs(cellA.x - cellB.x);
         int dstY = Mathf.Abs(cellA.y - cellB.y);
         int walls = grid[cellA.x, cellA.y].GetNumWalls();
-        /*if ((grid[cellA.x, cellA.y].walls & Wall.LEFT) != 0 && dstX == -1 && dstY == 0)
-        {
-            return 900;
-        }
-        else if ((grid[cellA.x, cellA.y].walls & Wall.RIGHT) != 0 && dstX == 1 && dstY == 0)
-        {
-            return 900;
-        }
-        else if ((grid[cellA.x, cellA.y].walls & Wall.UP) != 0 && dstX == 0 && dstY == 1)
-        {
-            return 900;
-        }
-        else if ((grid[cellA.x, cellA.y].walls & Wall.DOWN) != 0 && dstX == 0 && dstY == -1)
-        {
-            return 900;
-        }
-        else
-        {*/
-            if (dstX > dstY)
+        if (dstX > dstY)
                 return 14 * dstY + 10 * (dstX - dstY);
             return 14 * dstX + 10 * (dstY - dstX);
         }
